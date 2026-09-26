@@ -1,4 +1,4 @@
-package com.ecopeques.ecopeques_backend.security.config;
+package com.ecopeques.ecopeques_backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

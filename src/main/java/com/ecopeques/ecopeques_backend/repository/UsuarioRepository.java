@@ -1,6 +1,6 @@
-package com.ecopeques.ecopeques_backend.usuario.repository;
+package com.ecopeques.ecopeques_backend.repository;
 
-import com.ecopeques.ecopeques_backend.usuario.domain.Usuario;
+import com.ecopeques.ecopeques_backend.model.Usuario;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

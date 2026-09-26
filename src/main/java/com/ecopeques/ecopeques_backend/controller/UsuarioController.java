@@ -1,8 +1,8 @@
-package com.ecopeques.ecopeques_backend.usuario.controller;
+package com.ecopeques.ecopeques_backend.controller;
 
-import com.ecopeques.ecopeques_backend.usuario.dto.AuthResponse;
-import com.ecopeques.ecopeques_backend.usuario.dto.RegisterRequest;
-import com.ecopeques.ecopeques_backend.usuario.service.UsuarioService;
+import com.ecopeques.ecopeques_backend.dto.AuthResponse;
+import com.ecopeques.ecopeques_backend.dto.RegisterRequest;
+import com.ecopeques.ecopeques_backend.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

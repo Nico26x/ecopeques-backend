@@ -1,6 +1,6 @@
-package com.ecopeques.ecopeques_backend.usuario.dto;
+package com.ecopeques.ecopeques_backend.dto;
 
-import com.ecopeques.ecopeques_backend.usuario.domain.Rol;
+import com.ecopeques.ecopeques_backend.model.Rol;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

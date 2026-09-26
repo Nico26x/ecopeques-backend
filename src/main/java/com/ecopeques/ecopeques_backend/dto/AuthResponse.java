@@ -1,6 +1,6 @@
-package com.ecopeques.ecopeques_backend.usuario.dto;
+package com.ecopeques.ecopeques_backend.dto;
 
-import com.ecopeques.ecopeques_backend.usuario.domain.Rol;
+import com.ecopeques.ecopeques_backend.model.Rol;
 
 public record AuthResponse(
         Long id,

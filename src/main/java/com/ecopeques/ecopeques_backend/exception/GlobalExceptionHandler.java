@@ -1,4 +1,4 @@
-package com.ecopeques.ecopeques_backend.shared.exception;
+package com.ecopeques.ecopeques_backend.exception;
 
 import java.util.Map;
 import org.springframework.http.HttpStatus;

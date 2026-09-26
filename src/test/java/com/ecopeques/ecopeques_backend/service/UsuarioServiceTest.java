@@ -1,4 +1,4 @@
-package com.ecopeques.ecopeques_backend.usuario.service;
+package com.ecopeques.ecopeques_backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -8,12 +8,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ecopeques.ecopeques_backend.shared.exception.EmailAlreadyExistsException;
-import com.ecopeques.ecopeques_backend.usuario.domain.Rol;
-import com.ecopeques.ecopeques_backend.usuario.domain.Usuario;
-import com.ecopeques.ecopeques_backend.usuario.dto.AuthResponse;
-import com.ecopeques.ecopeques_backend.usuario.dto.RegisterRequest;
-import com.ecopeques.ecopeques_backend.usuario.repository.UsuarioRepository;
+import com.ecopeques.ecopeques_backend.dto.AuthResponse;
+import com.ecopeques.ecopeques_backend.dto.RegisterRequest;
+import com.ecopeques.ecopeques_backend.exception.EmailAlreadyExistsException;
+import com.ecopeques.ecopeques_backend.model.Rol;
+import com.ecopeques.ecopeques_backend.model.Usuario;
+import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

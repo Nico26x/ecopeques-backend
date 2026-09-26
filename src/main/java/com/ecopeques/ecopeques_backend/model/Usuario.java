@@ -1,4 +1,4 @@
-package com.ecopeques.ecopeques_backend.usuario.domain;
+package com.ecopeques.ecopeques_backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
