@@ -1,6 +1,7 @@
 package com.ecopeques.ecopeques_backend.controller;
 
 import com.ecopeques.ecopeques_backend.dto.AuthResponse;
+import com.ecopeques.ecopeques_backend.dto.LoginRequest;
 import com.ecopeques.ecopeques_backend.dto.RegisterRequest;
 import com.ecopeques.ecopeques_backend.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -24,5 +25,10 @@ public class UsuarioController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(usuarioService.registrar(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(usuarioService.login(request));
     }
 }

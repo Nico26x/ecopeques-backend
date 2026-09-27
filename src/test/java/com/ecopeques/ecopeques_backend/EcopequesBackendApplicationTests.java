@@ -9,7 +9,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 		"spring.autoconfigure.exclude="
 				+ "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
 				+ "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
-				+ "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration"
+				+ "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration",
+		"ecopeques.jwt.secret=01234567890123456789012345678901",
+		"ecopeques.jwt.expiration-ms=86400000"
 })
 class EcopequesBackendApplicationTests {
 

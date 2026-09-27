@@ -7,6 +7,7 @@ public record AuthResponse(
         String nombre,
         String apellido,
         String email,
-        Rol rol
+        Rol rol,
+        String token
 ) {
 }
