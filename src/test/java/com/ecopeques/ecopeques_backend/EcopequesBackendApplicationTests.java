@@ -1,5 +1,6 @@
 package com.ecopeques.ecopeques_backend;
 
+import com.ecopeques.ecopeques_backend.repository.NinoRepository;
 import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,9 @@ class EcopequesBackendApplicationTests {
 
 	@MockitoBean
 	private UsuarioRepository usuarioRepository;
+
+	@MockitoBean
+	private NinoRepository ninoRepository;
 
 	@Test
 	void contextLoads() {
