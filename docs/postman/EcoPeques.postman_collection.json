@@ -1056,6 +1056,184 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "04 - HU-04 Catálogo de Misiones",
+      "item": [
+        {
+          "name": "Listar todas las misiones activas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La respuesta es un array no vacío', () => {",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(json.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filtrar misiones por categoría AGUA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Todas las misiones son de categoría AGUA', () => {",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  json.forEach(mision => pm.expect(mision.categoria).to.eql('AGUA'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones?categoria=AGUA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "AGUA"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filtrar misiones por categoría ENERGIA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Todas las misiones son de categoría ENERGIA', () => {",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  json.forEach(mision => pm.expect(mision.categoria).to.eql('ENERGIA'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones?categoria=ENERGIA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "ENERGIA"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar misiones sin token - 401 o 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Debe rechazar request sin token', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
