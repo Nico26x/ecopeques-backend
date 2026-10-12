@@ -1,6 +1,7 @@
 package com.ecopeques.ecopeques_backend;
 
 import com.ecopeques.ecopeques_backend.repository.MisionRepository;
+import com.ecopeques.ecopeques_backend.repository.NinoMisionRepository;
 import com.ecopeques.ecopeques_backend.repository.NinoRepository;
 import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,9 @@ class EcopequesBackendApplicationTests {
 
 	@MockitoBean
 	private MisionRepository misionRepository;
+
+	@MockitoBean
+	private NinoMisionRepository ninoMisionRepository;
 
 	@Test
 	void contextLoads() {

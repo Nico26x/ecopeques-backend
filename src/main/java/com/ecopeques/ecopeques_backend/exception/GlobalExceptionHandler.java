@@ -19,6 +19,20 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", exception.getMessage()));
     }
 
+    @ExceptionHandler({LimiteMisionesAlcanzadoException.class, MisionYaAsignadaException.class})
+    public ResponseEntity<Map<String, String>> handleMissionConflict(RuntimeException exception) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("message", exception.getMessage()));
+    }
+
+    @ExceptionHandler({NinoNotFoundException.class, MisionNotFoundException.class})
+    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException exception) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", exception.getMessage()));
+    }
+
     @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
     public ResponseEntity<Map<String, String>> handleInvalidCredentials(RuntimeException exception) {
         return ResponseEntity
