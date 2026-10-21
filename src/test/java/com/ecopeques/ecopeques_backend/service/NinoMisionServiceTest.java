@@ -24,6 +24,7 @@ import com.ecopeques.ecopeques_backend.repository.MisionRepository;
 import com.ecopeques.ecopeques_backend.repository.NinoMisionRepository;
 import com.ecopeques.ecopeques_backend.repository.NinoRepository;
 import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +67,8 @@ class NinoMisionServiceTest {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
         Nino nino = crearNino(10L, tutor);
         Mision mision = crearMision(20L, true);
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        LocalDate fechaLimite = LocalDate.now().plusDays(7);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, fechaLimite);
         LocalDateTime fechaAsignacion = LocalDateTime.now();
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
@@ -91,6 +93,7 @@ class NinoMisionServiceTest {
         assertEquals(nino, asignacionGuardada.getNino());
         assertEquals(mision, asignacionGuardada.getMision());
         assertEquals(EstadoMisionAsignada.EN_PROGRESO, asignacionGuardada.getEstado());
+        assertEquals(fechaLimite, asignacionGuardada.getFechaLimite());
 
         assertEquals(100L, response.id());
         assertEquals(10L, response.ninoId());
@@ -100,12 +103,13 @@ class NinoMisionServiceTest {
         assertEquals(10, response.semillasRecompensa());
         assertEquals(EstadoMisionAsignada.EN_PROGRESO, response.estado());
         assertEquals(fechaAsignacion, response.fechaAsignacion());
+        assertEquals(fechaLimite, response.fechaLimite());
     }
 
     @Test
     void asignarMision_CuandoNinoNoExiste_DeberiaLanzarNinoNotFoundException() {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, null);
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
         when(ninoRepository.findById(10L)).thenReturn(Optional.empty());
@@ -120,7 +124,7 @@ class NinoMisionServiceTest {
     void asignarMision_CuandoMisionNoExiste_DeberiaLanzarMisionNotFoundException() {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
         Nino nino = crearNino(10L, tutor);
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, null);
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
         when(ninoRepository.findById(10L)).thenReturn(Optional.of(nino));
@@ -136,7 +140,7 @@ class NinoMisionServiceTest {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
         Usuario otroTutor = crearTutor(2L, "otro@email.com");
         Nino nino = crearNino(10L, otroTutor);
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, null);
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
         when(ninoRepository.findById(10L)).thenReturn(Optional.of(nino));
@@ -152,7 +156,7 @@ class NinoMisionServiceTest {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
         Nino nino = crearNino(10L, tutor);
         Mision mision = crearMision(20L, true);
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, null);
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
         when(ninoRepository.findById(10L)).thenReturn(Optional.of(nino));
@@ -171,7 +175,7 @@ class NinoMisionServiceTest {
         Usuario tutor = crearTutor(1L, "tutor@email.com");
         Nino nino = crearNino(10L, tutor);
         Mision mision = crearMision(20L, true);
-        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L);
+        AsignarMisionRequest request = new AsignarMisionRequest(10L, 20L, null);
 
         when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
         when(ninoRepository.findById(10L)).thenReturn(Optional.of(nino));
