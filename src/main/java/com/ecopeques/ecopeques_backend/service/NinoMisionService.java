@@ -72,6 +72,7 @@ public class NinoMisionService {
                 .nino(nino)
                 .mision(mision)
                 .estado(EstadoMisionAsignada.EN_PROGRESO)
+                .fechaLimite(request.fechaLimite())
                 .build();
 
         return toResponse(ninoMisionRepository.save(asignacion));
@@ -94,7 +95,8 @@ public class NinoMisionService {
                 mision.getSemillasRecompensa(),
                 asignacion.getEstado(),
                 asignacion.getFechaAsignacion(),
-                asignacion.getFechaCompletado()
+                asignacion.getFechaCompletado(),
+                asignacion.getFechaLimite()
         );
     }
 }

@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,6 +50,9 @@ public class NinoMision {
 
     @Column(name = "fecha_completado")
     private LocalDateTime fechaCompletado;
+
+    @Column(name = "fecha_limite")
+    private LocalDate fechaLimite;
 
     @PrePersist
     void prePersist() {
