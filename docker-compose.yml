@@ -1,0 +1,58 @@
+services:
+  db:
+    image: mariadb:${MARIADB_VERSION:-10.11}
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ecopeques_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-12345}
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - ecopeques-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mariadb://db:3306/${MYSQL_DATABASE:-ecopeques_db}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-12345}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    restart: unless-stopped
+    networks:
+      - ecopeques-net
+
+  frontend:
+    build:
+      context: ../ecopeques-frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    restart: unless-stopped
+    networks:
+      - ecopeques-net
+
+networks:
+  ecopeques-net:
+    driver: bridge
+
+volumes:
+  mariadb_data:
