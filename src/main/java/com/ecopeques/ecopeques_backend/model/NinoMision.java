@@ -54,8 +54,18 @@ public class NinoMision {
     @Column(name = "fecha_limite")
     private LocalDate fechaLimite;
 
+    @Column(name = "evidencia", columnDefinition = "LONGTEXT")
+    private String evidencia;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean acreditada = false;
+
     @PrePersist
     void prePersist() {
         this.fechaAsignacion = LocalDateTime.now();
+        if (this.acreditada == null) {
+            this.acreditada = false;
+        }
     }
 }

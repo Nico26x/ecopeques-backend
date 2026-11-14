@@ -19,17 +19,28 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", exception.getMessage()));
     }
 
-    @ExceptionHandler({LimiteMisionesAlcanzadoException.class, MisionYaAsignadaException.class})
+    @ExceptionHandler({
+            LimiteMisionesAlcanzadoException.class,
+            MisionYaAsignadaException.class,
+            MisionNoConfirmableException.class
+    })
     public ResponseEntity<Map<String, String>> handleMissionConflict(RuntimeException exception) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(Map.of("message", exception.getMessage()));
     }
 
-    @ExceptionHandler({NinoNotFoundException.class, MisionNotFoundException.class})
+    @ExceptionHandler({NinoNotFoundException.class, MisionNotFoundException.class, NinoMisionNotFoundException.class})
     public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException exception) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", exception.getMessage()));
+    }
+
+    @ExceptionHandler(EvidenciaInvalidaException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidEvidence(EvidenciaInvalidaException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", exception.getMessage()));
     }
 

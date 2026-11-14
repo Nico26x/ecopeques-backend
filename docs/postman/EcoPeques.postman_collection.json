@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "51f5b5f8-c1ea-4f3a-a69b-9acaf56f819b",
     "name": "EcoPeques Backend API",
-    "description": "Colección QA para HU-01 Registro Tutor, HU-02 Autenticación JWT y HU-03 Perfiles Infantiles.",
+    "description": "Colección QA para HU-01 Registro Tutor, HU-02 Autenticación JWT, HU-03 Perfiles Infantiles, HU-04 Catálogo de Misiones, HU-05 Asignación de Misiones y HU-06 Confirmación de Misiones.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1541,6 +1541,1034 @@
               "path": [
                 "misiones",
                 "asignar"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - HU-06 Confirmación de Misiones",
+      "item": [
+        {
+          "name": "Preparar HU-06 y Obtener Catálogo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;",
+                  "pm.environment.set('hu06_run_id', runId);",
+                  "pm.environment.set('hu06_otro_email', `hu06-otro-${runId}@ecopeques.com`);",
+                  "pm.environment.set('hu06_asignacion_inexistente_id', '9223372036854775807');",
+                  "const variablesAnteriores = [",
+                  "  'hu06_nino_id',",
+                  "  'hu06_asignacion_url_id',",
+                  "  'hu06_asignacion_sin_evidencia_id',",
+                  "  'hu06_asignacion_base64_id',",
+                  "  'hu06_otro_tutor_id',",
+                  "  'hu06_otro_jwt_token',",
+                  "  'hu06_otro_nino_id',",
+                  "  'hu06_otra_asignacion_id'",
+                  "];",
+                  "variablesAnteriores.forEach(key => pm.environment.unset(key));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('El catálogo contiene al menos tres misiones', () => {",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(json.length).to.be.at.least(3);",
+                  "});",
+                  "const titulos = [",
+                  "  'Cerrar la llave mientras te cepillas',",
+                  "  'Reutilizar agua para plantas',",
+                  "  'Apagar luces innecesarias'",
+                  "];",
+                  "const misiones = titulos.map(titulo => json.find(mision => mision.titulo === titulo));",
+                  "pm.test('Las misiones requeridas existen', () => {",
+                  "  misiones.forEach(mision => pm.expect(mision).to.exist);",
+                  "});",
+                  "pm.environment.set('hu06_mision_id_1', misiones[0].id);",
+                  "pm.environment.set('hu06_mision_id_2', misiones[1].id);",
+                  "pm.environment.set('hu06_mision_id_3', misiones[2].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Niño para HU-06",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('El niño pertenece al tutor y empieza sin semillas', () => {",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json.nombre).to.eql(`HU06-${pm.environment.get('hu06_run_id')}`);",
+                  "  pm.expect(json.totalSemillas).to.eql(0);",
+                  "  pm.expect(String(json.tutorId)).to.eql(String(pm.environment.get('tutor_id')));",
+                  "});",
+                  "pm.environment.set('hu06_nino_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"HU06-{{hu06_run_id}}\",\n  \"avatar\": null,\n  \"grupo\": \"QA HU-06\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión para Evidencia URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('La asignación queda EN_PROGRESO sin acreditar', () => {",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu06_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu06_mision_id_1')));",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu06_asignacion_url_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu06_nino_id}},\n  \"misionId\": {{hu06_mision_id_1}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión para Confirmación sin Evidencia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('La asignación queda EN_PROGRESO sin acreditar', () => {",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu06_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu06_mision_id_2')));",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu06_asignacion_sin_evidencia_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu06_nino_id}},\n  \"misionId\": {{hu06_mision_id_2}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión para Evidencia Base64",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('La asignación queda EN_PROGRESO sin acreditar', () => {",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu06_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu06_mision_id_3')));",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu06_asignacion_base64_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu06_nino_id}},\n  \"misionId\": {{hu06_mision_id_3}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Pendientes Iniciales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const ninoId = String(pm.environment.get('hu06_nino_id'));",
+                  "const propias = json.filter(asignacion => String(asignacion.ninoId) === ninoId);",
+                  "pm.test('El niño de HU-06 tiene tres misiones pendientes', () => {",
+                  "  pm.expect(propias).to.have.length(3);",
+                  "  propias.forEach(asignacion => {",
+                  "    pm.expect(asignacion.estado).to.eql('EN_PROGRESO');",
+                  "    pm.expect(asignacion.acreditada).to.eql(false);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/tutor/pendientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "tutor",
+                "pendientes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Formato de Evidencia Inválido - 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de formato inválido', () => {",
+                  "  pm.expect(json.message).to.eql('Formato de evidencia inválido. Debe ser una URL válida o una imagen en Base64');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_base64_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_base64_id}}",
+                "confirmar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidencia\": \"archivo-local.jpg\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Evidencia Mayor a 2MB - 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('hu06_evidencia_grande', 'data:image/png;base64,' + 'A'.repeat(2800000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de tamaño máximo', () => {",
+                  "  pm.expect(json.message).to.eql('La evidencia supera el tamaño máximo permitido (2MB)');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_base64_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_base64_id}}",
+                "confirmar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidencia\": \"{{hu06_evidencia_grande}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar con URL - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión queda completada con URL normalizada', () => {",
+                  "  pm.expect(String(json.id)).to.eql(String(pm.environment.get('hu06_asignacion_url_id')));",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu06_nino_id')));",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.fechaCompletado).to.not.eql(null);",
+                  "  pm.expect(json.evidencia).to.eql('https://example.com/evidencias/hu06.jpg');",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_url_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_url_id}}",
+                "confirmar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidencia\": \"  https://example.com/evidencias/hu06.jpg  \"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reconfirmar Misión Completada - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de misión no confirmable', () => {",
+                  "  pm.expect(json.message).to.eql('La misión asignada ya fue completada o no está en progreso');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_url_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_url_id}}",
+                "confirmar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidencia\": \"https://example.com/evidencias/hu06.jpg\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar sin Evidencia - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión se completa sin evidencia', () => {",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.fechaCompletado).to.not.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_sin_evidencia_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_sin_evidencia_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignación Inexistente - 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de asignación inexistente', () => {",
+                  "  pm.expect(json.message).to.eql('La asignación de misión no existe');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_inexistente_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_inexistente_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar sin Token - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_base64_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_base64_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar Segundo Tutor para HU-06",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Se registra el segundo tutor', () => {",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('token');",
+                  "});",
+                  "pm.environment.set('hu06_otro_tutor_id', json.id);",
+                  "pm.environment.set('hu06_otro_jwt_token', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Tutor\",\n  \"apellido\": \"Secundario\",\n  \"email\": \"{{hu06_otro_email}}\",\n  \"password\": \"{{registered_password}}\",\n  \"rol\": \"PADRE\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Niño del Segundo Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('El niño pertenece al segundo tutor', () => {",
+                  "  pm.expect(String(json.tutorId)).to.eql(String(pm.environment.get('hu06_otro_tutor_id')));",
+                  "});",
+                  "pm.environment.set('hu06_otro_nino_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hu06_otro_jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"HU06-Otro-{{hu06_run_id}}\",\n  \"avatar\": null,\n  \"grupo\": \"QA HU-06 Otro Tutor\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión del Segundo Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('La asignación pertenece al niño del segundo tutor', () => {",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu06_otro_nino_id')));",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "});",
+                  "pm.environment.set('hu06_otra_asignacion_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hu06_otro_jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu06_otro_nino_id}},\n  \"misionId\": {{hu06_mision_id_1}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar Asignación Ajena - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403 Forbidden', () => pm.response.to.have.status(403));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de acceso denegado', () => {",
+                  "  pm.expect(json.message).to.eql('No tienes permisos para acceder a este recurso');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_otra_asignacion_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_otra_asignacion_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar con Base64 - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión queda completada con Base64', () => {",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.evidencia).to.eql('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB');",
+                  "  pm.expect(json.fechaCompletado).to.not.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu06_asignacion_base64_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu06_asignacion_base64_id}}",
+                "confirmar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidencia\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validar que No se Acreditaron Semillas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const nino = json.find(item => String(item.id) === String(pm.environment.get('hu06_nino_id')));",
+                  "pm.test('HU-06 no acredita semillas', () => {",
+                  "  pm.expect(nino).to.exist;",
+                  "  pm.expect(nino.totalSemillas).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos/tutor/{{tutor_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos",
+                "tutor",
+                "{{tutor_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Pendientes Finales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const propias = json.filter(asignacion => String(asignacion.ninoId) === String(pm.environment.get('hu06_nino_id')));",
+                  "pm.test('El niño de HU-06 ya no tiene misiones pendientes', () => {",
+                  "  pm.expect(propias).to.have.length(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/tutor/pendientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "tutor",
+                "pendientes"
               ]
             }
           },

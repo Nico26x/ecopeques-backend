@@ -1,6 +1,8 @@
 package com.ecopeques.ecopeques_backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -8,10 +10,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ecopeques.ecopeques_backend.dto.AsignarMisionRequest;
+import com.ecopeques.ecopeques_backend.dto.ConfirmarMisionRequest;
 import com.ecopeques.ecopeques_backend.dto.MisionAsignadaResponse;
+import com.ecopeques.ecopeques_backend.exception.EvidenciaInvalidaException;
 import com.ecopeques.ecopeques_backend.exception.LimiteMisionesAlcanzadoException;
+import com.ecopeques.ecopeques_backend.exception.MisionNoConfirmableException;
 import com.ecopeques.ecopeques_backend.exception.MisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.MisionYaAsignadaException;
+import com.ecopeques.ecopeques_backend.exception.NinoMisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.NinoNotFoundException;
 import com.ecopeques.ecopeques_backend.model.CategoriaMision;
 import com.ecopeques.ecopeques_backend.model.EstadoMisionAsignada;
@@ -26,6 +32,7 @@ import com.ecopeques.ecopeques_backend.repository.NinoRepository;
 import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,6 +111,8 @@ class NinoMisionServiceTest {
         assertEquals(EstadoMisionAsignada.EN_PROGRESO, response.estado());
         assertEquals(fechaAsignacion, response.fechaAsignacion());
         assertEquals(fechaLimite, response.fechaLimite());
+        assertNull(response.evidencia());
+        assertEquals(false, response.acreditada());
     }
 
     @Test
@@ -190,6 +199,214 @@ class NinoMisionServiceTest {
         );
 
         verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void confirmarMision_SinEvidencia_DeberiaCompletarSinAcreditarSemillas() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Nino nino = crearNino(10L, tutor);
+        nino.setTotalSemillas(25);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.EN_PROGRESO);
+
+        configurarConfirmacion(tutor, asignacion);
+
+        MisionAsignadaResponse response = ninoMisionService.confirmarMision(
+                100L,
+                null,
+                " TUTOR@EMAIL.COM "
+        );
+
+        assertEquals(EstadoMisionAsignada.COMPLETADA, asignacion.getEstado());
+        assertNotNull(asignacion.getFechaCompletado());
+        assertNull(asignacion.getEvidencia());
+        assertEquals(false, asignacion.getAcreditada());
+        assertEquals(25, nino.getTotalSemillas());
+        assertEquals(EstadoMisionAsignada.COMPLETADA, response.estado());
+        assertEquals(false, response.acreditada());
+        verify(ninoMisionRepository).save(asignacion);
+    }
+
+    @Test
+    void confirmarMision_ConUrlValida_DeberiaGuardarEvidenciaNormalizada() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+        configurarConfirmacion(tutor, asignacion);
+
+        MisionAsignadaResponse response = ninoMisionService.confirmarMision(
+                100L,
+                new ConfirmarMisionRequest("  https://example.com/evidencia.jpg  "),
+                "tutor@email.com"
+        );
+
+        assertEquals("https://example.com/evidencia.jpg", asignacion.getEvidencia());
+        assertEquals("https://example.com/evidencia.jpg", response.evidencia());
+    }
+
+    @Test
+    void confirmarMision_ConImagenBase64Valida_DeberiaGuardarEvidencia() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+        String evidencia = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+        configurarConfirmacion(tutor, asignacion);
+
+        MisionAsignadaResponse response = ninoMisionService.confirmarMision(
+                100L,
+                new ConfirmarMisionRequest(evidencia),
+                "tutor@email.com"
+        );
+
+        assertEquals(evidencia, asignacion.getEvidencia());
+        assertEquals(evidencia, response.evidencia());
+    }
+
+    @Test
+    void confirmarMision_CuandoAsignacionNoExiste_DeberiaLanzarNinoMisionNotFoundException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                NinoMisionNotFoundException.class,
+                () -> ninoMisionService.confirmarMision(100L, null, "tutor@email.com")
+        );
+
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void confirmarMision_CuandoPerteneceAOtroTutor_DeberiaLanzarAccessDeniedException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Usuario otroTutor = crearTutor(2L, "otro@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, otroTutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> ninoMisionService.confirmarMision(100L, null, "tutor@email.com")
+        );
+
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void confirmarMision_CuandoYaEstaCompletada_DeberiaLanzarMisionNoConfirmableException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.COMPLETADA
+        );
+
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+
+        assertThrows(
+                MisionNoConfirmableException.class,
+                () -> ninoMisionService.confirmarMision(100L, null, "tutor@email.com")
+        );
+
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void confirmarMision_ConFormatoDeEvidenciaInvalido_DeberiaLanzarEvidenciaInvalidaException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+        configurarAsignacionParaConfirmar(tutor, asignacion);
+
+        assertThrows(
+                EvidenciaInvalidaException.class,
+                () -> ninoMisionService.confirmarMision(
+                        100L,
+                        new ConfirmarMisionRequest("archivo-local.jpg"),
+                        "tutor@email.com"
+                )
+        );
+
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void confirmarMision_ConEvidenciaDemasiadoGrande_DeberiaLanzarEvidenciaInvalidaException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+        String evidencia = "data:image/png;base64," + "A".repeat(2_800_000);
+        configurarAsignacionParaConfirmar(tutor, asignacion);
+
+        assertThrows(
+                EvidenciaInvalidaException.class,
+                () -> ninoMisionService.confirmarMision(
+                        100L,
+                        new ConfirmarMisionRequest(evidencia),
+                        "tutor@email.com"
+                )
+        );
+
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void listarPendientesPorTutor_DeberiaRetornarAsignacionesEnProgreso() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        NinoMision asignacion = crearAsignacion(
+                100L,
+                crearNino(10L, tutor),
+                EstadoMisionAsignada.EN_PROGRESO
+        );
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByNinoTutorIdAndEstadoOrderByFechaAsignacionDesc(
+                1L,
+                EstadoMisionAsignada.EN_PROGRESO
+        )).thenReturn(List.of(asignacion));
+
+        List<MisionAsignadaResponse> response = ninoMisionService.listarPendientesPorTutor("tutor@email.com");
+
+        assertEquals(1, response.size());
+        assertEquals(100L, response.getFirst().id());
+        assertEquals(EstadoMisionAsignada.EN_PROGRESO, response.getFirst().estado());
+    }
+
+    private void configurarConfirmacion(Usuario tutor, NinoMision asignacion) {
+        configurarAsignacionParaConfirmar(tutor, asignacion);
+        when(ninoMisionRepository.save(asignacion)).thenReturn(asignacion);
+    }
+
+    private void configurarAsignacionParaConfirmar(Usuario tutor, NinoMision asignacion) {
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(asignacion.getId())).thenReturn(Optional.of(asignacion));
+    }
+
+    private NinoMision crearAsignacion(Long id, Nino nino, EstadoMisionAsignada estado) {
+        return NinoMision.builder()
+                .id(id)
+                .nino(nino)
+                .mision(crearMision(20L, true))
+                .estado(estado)
+                .fechaAsignacion(LocalDateTime.now())
+                .acreditada(false)
+                .build();
     }
 
     private Usuario crearTutor(Long id, String email) {

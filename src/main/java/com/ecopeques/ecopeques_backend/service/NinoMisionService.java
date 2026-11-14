@@ -1,10 +1,14 @@
 package com.ecopeques.ecopeques_backend.service;
 
 import com.ecopeques.ecopeques_backend.dto.AsignarMisionRequest;
+import com.ecopeques.ecopeques_backend.dto.ConfirmarMisionRequest;
 import com.ecopeques.ecopeques_backend.dto.MisionAsignadaResponse;
+import com.ecopeques.ecopeques_backend.exception.EvidenciaInvalidaException;
 import com.ecopeques.ecopeques_backend.exception.LimiteMisionesAlcanzadoException;
+import com.ecopeques.ecopeques_backend.exception.MisionNoConfirmableException;
 import com.ecopeques.ecopeques_backend.exception.MisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.MisionYaAsignadaException;
+import com.ecopeques.ecopeques_backend.exception.NinoMisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.NinoNotFoundException;
 import com.ecopeques.ecopeques_backend.model.EstadoMisionAsignada;
 import com.ecopeques.ecopeques_backend.model.Mision;
@@ -15,6 +19,8 @@ import com.ecopeques.ecopeques_backend.repository.MisionRepository;
 import com.ecopeques.ecopeques_backend.repository.NinoMisionRepository;
 import com.ecopeques.ecopeques_backend.repository.NinoRepository;
 import com.ecopeques.ecopeques_backend.repository.UsuarioRepository;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NinoMisionService {
 
     private static final int LIMITE_MISIONES_EN_PROGRESO = 3;
+    private static final int LONGITUD_MAXIMA_EVIDENCIA = 2_800_000;
 
     private final NinoRepository ninoRepository;
     private final MisionRepository misionRepository;
@@ -78,10 +85,71 @@ public class NinoMisionService {
         return toResponse(ninoMisionRepository.save(asignacion));
     }
 
+    @Transactional
+    public MisionAsignadaResponse confirmarMision(
+            Long id,
+            ConfirmarMisionRequest request,
+            String emailTutorAutenticado
+    ) {
+        Usuario tutor = buscarTutorPorEmail(emailTutorAutenticado);
+        NinoMision asignacion = ninoMisionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NinoMisionNotFoundException("La asignación de misión no existe"));
+
+        if (!asignacion.getNino().getTutor().getId().equals(tutor.getId())) {
+            throw new AccessDeniedException("No tienes permiso para confirmar esta misión");
+        }
+
+        if (asignacion.getEstado() != EstadoMisionAsignada.EN_PROGRESO) {
+            throw new MisionNoConfirmableException(
+                    "La misión asignada ya fue completada o no está en progreso"
+            );
+        }
+
+        String evidenciaNormalizada = validarEvidencia(request);
+        asignacion.setEstado(EstadoMisionAsignada.COMPLETADA);
+        asignacion.setFechaCompletado(LocalDateTime.now());
+        asignacion.setEvidencia(evidenciaNormalizada);
+        asignacion.setAcreditada(false);
+
+        return toResponse(ninoMisionRepository.save(asignacion));
+    }
+
+    @Transactional(readOnly = true)
+    public List<MisionAsignadaResponse> listarPendientesPorTutor(String emailTutorAutenticado) {
+        Usuario tutor = buscarTutorPorEmail(emailTutorAutenticado);
+        return ninoMisionRepository.findByNinoTutorIdAndEstadoOrderByFechaAsignacionDesc(
+                        tutor.getId(),
+                        EstadoMisionAsignada.EN_PROGRESO
+                ).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private Usuario buscarTutorPorEmail(String email) {
         String emailNormalizado = email.trim().toLowerCase();
         return usuarioRepository.findByEmail(emailNormalizado)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+    }
+
+    private String validarEvidencia(ConfirmarMisionRequest request) {
+        if (request == null || request.evidencia() == null || request.evidencia().isBlank()) {
+            return null;
+        }
+
+        String evidencia = request.evidencia().trim();
+        if (evidencia.length() > LONGITUD_MAXIMA_EVIDENCIA) {
+            throw new EvidenciaInvalidaException("La evidencia supera el tamaño máximo permitido (2MB)");
+        }
+
+        if (!evidencia.startsWith("http://")
+                && !evidencia.startsWith("https://")
+                && !evidencia.startsWith("data:image/")) {
+            throw new EvidenciaInvalidaException(
+                    "Formato de evidencia inválido. Debe ser una URL válida o una imagen en Base64"
+            );
+        }
+
+        return evidencia;
     }
 
     private MisionAsignadaResponse toResponse(NinoMision asignacion) {
@@ -96,7 +164,9 @@ public class NinoMisionService {
                 asignacion.getEstado(),
                 asignacion.getFechaAsignacion(),
                 asignacion.getFechaCompletado(),
-                asignacion.getFechaLimite()
+                asignacion.getFechaLimite(),
+                asignacion.getEvidencia(),
+                asignacion.getAcreditada()
         );
     }
 }

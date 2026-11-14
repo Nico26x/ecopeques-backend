@@ -15,6 +15,8 @@ public record MisionAsignadaResponse(
         EstadoMisionAsignada estado,
         LocalDateTime fechaAsignacion,
         LocalDateTime fechaCompletado,
-        LocalDate fechaLimite
+        LocalDate fechaLimite,
+        String evidencia,
+        Boolean acreditada
 ) {
 }
