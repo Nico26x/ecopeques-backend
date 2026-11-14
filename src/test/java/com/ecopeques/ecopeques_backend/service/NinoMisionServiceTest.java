@@ -11,9 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.ecopeques.ecopeques_backend.dto.AsignarMisionRequest;
 import com.ecopeques.ecopeques_backend.dto.ConfirmarMisionRequest;
+import com.ecopeques.ecopeques_backend.dto.MisionAcreditadaResponse;
 import com.ecopeques.ecopeques_backend.dto.MisionAsignadaResponse;
 import com.ecopeques.ecopeques_backend.exception.EvidenciaInvalidaException;
 import com.ecopeques.ecopeques_backend.exception.LimiteMisionesAlcanzadoException;
+import com.ecopeques.ecopeques_backend.exception.MisionNoAcreditableException;
 import com.ecopeques.ecopeques_backend.exception.MisionNoConfirmableException;
 import com.ecopeques.ecopeques_backend.exception.MisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.MisionYaAsignadaException;
@@ -364,6 +366,139 @@ class NinoMisionServiceTest {
                 )
         );
 
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void acreditarMision_CuandoEstaCompletada_DeberiaSumarSemillasYMarcarAcreditada() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Nino nino = crearNino(10L, tutor);
+        nino.setTotalSemillas(25);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.COMPLETADA);
+        asignacion.getMision().setSemillasRecompensa(10);
+        asignacion.getMision().setPuntosOtorgados(99);
+
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+        when(ninoRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(nino));
+
+        MisionAcreditadaResponse response = ninoMisionService.acreditarMision(
+                100L,
+                " TUTOR@EMAIL.COM "
+        );
+
+        assertEquals(35, nino.getTotalSemillas());
+        assertEquals(true, asignacion.getAcreditada());
+        assertEquals(EstadoMisionAsignada.COMPLETADA, asignacion.getEstado());
+        assertEquals(100L, response.id());
+        assertEquals(10L, response.ninoId());
+        assertEquals(20L, response.misionId());
+        assertEquals(10, response.semillasAcreditadas());
+        assertEquals(35, response.totalSemillas());
+        assertEquals(true, response.acreditada());
+        verify(ninoMisionRepository).findByIdForUpdate(100L);
+        verify(ninoRepository).findByIdForUpdate(10L);
+        verify(ninoRepository).save(nino);
+        verify(ninoMisionRepository).save(asignacion);
+    }
+
+    @Test
+    void acreditarMision_CuandoAsignacionNoExiste_DeberiaLanzarNinoMisionNotFoundException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                NinoMisionNotFoundException.class,
+                () -> ninoMisionService.acreditarMision(100L, "tutor@email.com")
+        );
+
+        verify(ninoRepository, never()).findByIdForUpdate(any(Long.class));
+        verify(ninoRepository, never()).save(any(Nino.class));
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void acreditarMision_CuandoPerteneceAOtroTutor_DeberiaLanzarAccessDeniedException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Usuario otroTutor = crearTutor(2L, "otro@email.com");
+        Nino nino = crearNino(10L, otroTutor);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.COMPLETADA);
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> ninoMisionService.acreditarMision(100L, "tutor@email.com")
+        );
+
+        assertEquals(0, nino.getTotalSemillas());
+        assertEquals(false, asignacion.getAcreditada());
+        verify(ninoRepository, never()).findByIdForUpdate(any(Long.class));
+        verify(ninoRepository, never()).save(any(Nino.class));
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void acreditarMision_CuandoEstaEnProgreso_DeberiaLanzarMisionNoAcreditableException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Nino nino = crearNino(10L, tutor);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.EN_PROGRESO);
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+
+        MisionNoAcreditableException exception = assertThrows(
+                MisionNoAcreditableException.class,
+                () -> ninoMisionService.acreditarMision(100L, "tutor@email.com")
+        );
+
+        assertEquals("La misión debe estar completada antes de acreditarla", exception.getMessage());
+        assertEquals(0, nino.getTotalSemillas());
+        assertEquals(false, asignacion.getAcreditada());
+        verify(ninoRepository, never()).findByIdForUpdate(any(Long.class));
+        verify(ninoRepository, never()).save(any(Nino.class));
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void acreditarMision_CuandoYaFueAcreditada_DeberiaLanzarMisionNoAcreditableException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Nino nino = crearNino(10L, tutor);
+        nino.setTotalSemillas(10);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.COMPLETADA);
+        asignacion.setAcreditada(true);
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+
+        MisionNoAcreditableException exception = assertThrows(
+                MisionNoAcreditableException.class,
+                () -> ninoMisionService.acreditarMision(100L, "tutor@email.com")
+        );
+
+        assertEquals("La misión ya fue acreditada", exception.getMessage());
+        assertEquals(10, nino.getTotalSemillas());
+        verify(ninoRepository, never()).findByIdForUpdate(any(Long.class));
+        verify(ninoRepository, never()).save(any(Nino.class));
+        verify(ninoMisionRepository, never()).save(any(NinoMision.class));
+    }
+
+    @Test
+    void acreditarMision_CuandoNinoNoExiste_DeberiaLanzarNinoNotFoundException() {
+        Usuario tutor = crearTutor(1L, "tutor@email.com");
+        Nino nino = crearNino(10L, tutor);
+        NinoMision asignacion = crearAsignacion(100L, nino, EstadoMisionAsignada.COMPLETADA);
+        when(usuarioRepository.findByEmail("tutor@email.com")).thenReturn(Optional.of(tutor));
+        when(ninoMisionRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(asignacion));
+        when(ninoRepository.findByIdForUpdate(10L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                NinoNotFoundException.class,
+                () -> ninoMisionService.acreditarMision(100L, "tutor@email.com")
+        );
+
+        assertEquals(0, nino.getTotalSemillas());
+        assertEquals(false, asignacion.getAcreditada());
+        verify(ninoRepository, never()).save(any(Nino.class));
         verify(ninoMisionRepository, never()).save(any(NinoMision.class));
     }
 

@@ -22,7 +22,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             LimiteMisionesAlcanzadoException.class,
             MisionYaAsignadaException.class,
-            MisionNoConfirmableException.class
+            MisionNoConfirmableException.class,
+            MisionNoAcreditableException.class
     })
     public ResponseEntity<Map<String, String>> handleMissionConflict(RuntimeException exception) {
         return ResponseEntity

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "51f5b5f8-c1ea-4f3a-a69b-9acaf56f819b",
     "name": "EcoPeques Backend API",
-    "description": "Colección QA para HU-01 Registro Tutor, HU-02 Autenticación JWT, HU-03 Perfiles Infantiles, HU-04 Catálogo de Misiones, HU-05 Asignación de Misiones y HU-06 Confirmación de Misiones.",
+    "description": "Colección QA para HU-01 Registro Tutor, HU-02 Autenticación JWT, HU-03 Perfiles Infantiles, HU-04 Catálogo de Misiones, HU-05 Asignación de Misiones, HU-06 Confirmación de Misiones y HU-07 Acreditación de Semillas.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2569,6 +2569,959 @@
                 "misiones-ninos",
                 "tutor",
                 "pendientes"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 - HU-07 Acreditación de Semillas",
+      "item": [
+        {
+          "name": "Preparar HU-07 y Obtener Catálogo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const variablesHu07 = [",
+                  "  'hu07_run_id',",
+                  "  'hu07_nino_id',",
+                  "  'hu07_mision_id_1',",
+                  "  'hu07_mision_id_2',",
+                  "  'hu07_mision_recompensa_1',",
+                  "  'hu07_mision_recompensa_2',",
+                  "  'hu07_asignacion_1_id',",
+                  "  'hu07_asignacion_2_id',",
+                  "  'hu07_asignacion_inexistente_id',",
+                  "  'hu07_otro_email',",
+                  "  'hu07_otro_tutor_id',",
+                  "  'hu07_otro_jwt_token',",
+                  "  'hu07_otro_nino_id',",
+                  "  'hu07_otra_asignacion_id'",
+                  "];",
+                  "variablesHu07.forEach(key => pm.environment.unset(key));",
+                  "const runId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;",
+                  "pm.environment.set('hu07_run_id', runId);",
+                  "pm.environment.set('hu07_otro_email', `hu07-otro-${runId}@ecopeques.com`);",
+                  "pm.environment.set('hu07_asignacion_inexistente_id', '9223372036854775807');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const titulos = [",
+                  "  'Cerrar la llave mientras te cepillas',",
+                  "  'Reutilizar agua para plantas'",
+                  "];",
+                  "const misiones = titulos.map(titulo => json.find(mision => mision.titulo === titulo));",
+                  "pm.test('El catálogo contiene las dos misiones requeridas', () => {",
+                  "  pm.expect(json).to.be.an('array');",
+                  "  pm.expect(misiones.every(Boolean)).to.eql(true);",
+                  "});",
+                  "pm.test('Las recompensas son numéricas y positivas', () => {",
+                  "  misiones.filter(Boolean).forEach(mision => {",
+                  "    pm.expect(mision).to.have.property('id');",
+                  "    pm.expect(mision.semillasRecompensa).to.be.a('number').and.above(0);",
+                  "  });",
+                  "});",
+                  "if (misiones.every(Boolean)) {",
+                  "  pm.environment.set('hu07_mision_id_1', misiones[0].id);",
+                  "  pm.environment.set('hu07_mision_recompensa_1', misiones[0].semillasRecompensa);",
+                  "  pm.environment.set('hu07_mision_id_2', misiones[1].id);",
+                  "  pm.environment.set('hu07_mision_recompensa_2', misiones[1].semillasRecompensa);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Niño para HU-07",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('El niño aislado inicia sin semillas', () => {",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json.nombre).to.eql(`HU07-${pm.environment.get('hu07_run_id')}`);",
+                  "  pm.expect(json.totalSemillas).to.eql(0);",
+                  "  pm.expect(String(json.tutorId)).to.eql(String(pm.environment.get('tutor_id')));",
+                  "});",
+                  "pm.environment.set('hu07_nino_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"HU07-{{hu07_run_id}}\",\n  \"avatar\": null,\n  \"grupo\": \"QA HU-07\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión 1 para Acreditar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "const recompensa = Number(pm.environment.get('hu07_mision_recompensa_1'));",
+                  "pm.test('La asignación queda EN_PROGRESO y sin acreditar', () => {",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu07_mision_id_1')));",
+                  "  pm.expect(json.semillasRecompensa).to.eql(recompensa);",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu07_asignacion_1_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu07_nino_id}},\n  \"misionId\": {{hu07_mision_id_1}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión 2 para Acreditar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "const recompensa = Number(pm.environment.get('hu07_mision_recompensa_2'));",
+                  "pm.test('La asignación queda EN_PROGRESO y sin acreditar', () => {",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu07_mision_id_2')));",
+                  "  pm.expect(json.semillasRecompensa).to.eql(recompensa);",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu07_asignacion_2_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu07_nino_id}},\n  \"misionId\": {{hu07_mision_id_2}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar Misión 1 para Acreditar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión queda COMPLETADA y lista para acreditar', () => {",
+                  "  pm.expect(String(json.id)).to.eql(String(pm.environment.get('hu07_asignacion_1_id')));",
+                  "  pm.expect(json.semillasRecompensa).to.eql(Number(pm.environment.get('hu07_mision_recompensa_1')));",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.fechaCompletado).to.not.eql(null);",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_1_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_1_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Acreditar Misión en Progreso - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje exige completar antes de acreditar', () => {",
+                  "  pm.expect(json.message).to.eql('La misión debe estar completada antes de acreditarla');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_2_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_2_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignación Inexistente - 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de asignación inexistente', () => {",
+                  "  pm.expect(json.message).to.eql('La asignación de misión no existe');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_inexistente_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_inexistente_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Acreditar sin Token - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_1_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_1_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar Segundo Tutor para HU-07",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Se registra el segundo tutor', () => {",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('token');",
+                  "});",
+                  "pm.environment.set('hu07_otro_tutor_id', json.id);",
+                  "pm.environment.set('hu07_otro_jwt_token', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Tutor\",\n  \"apellido\": \"Secundario\",\n  \"email\": \"{{hu07_otro_email}}\",\n  \"password\": \"{{registered_password}}\",\n  \"rol\": \"PADRE\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Niño del Segundo Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('El niño pertenece al segundo tutor', () => {",
+                  "  pm.expect(String(json.tutorId)).to.eql(String(pm.environment.get('hu07_otro_tutor_id')));",
+                  "  pm.expect(json.totalSemillas).to.eql(0);",
+                  "});",
+                  "pm.environment.set('hu07_otro_nino_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hu07_otro_jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"HU07-Otro-{{hu07_run_id}}\",\n  \"avatar\": null,\n  \"grupo\": \"QA HU-07 Otro Tutor\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar Misión del Segundo Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión queda asignada al niño del segundo tutor', () => {",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_otro_nino_id')));",
+                  "  pm.expect(json.estado).to.eql('EN_PROGRESO');",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});",
+                  "pm.environment.set('hu07_otra_asignacion_id', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hu07_otro_jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones",
+                "asignar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ninoId\": {{hu07_otro_nino_id}},\n  \"misionId\": {{hu07_mision_id_1}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar Misión del Segundo Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión ajena queda completada sin acreditar', () => {",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_otro_nino_id')));",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hu07_otro_jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_otra_asignacion_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_otra_asignacion_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Acreditar Asignación Ajena - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403 Forbidden', () => pm.response.to.have.status(403));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje de acceso denegado', () => {",
+                  "  pm.expect(json.message).to.eql('No tienes permisos para acceder a este recurso');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_otra_asignacion_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_otra_asignacion_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Acreditar Misión 1 - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const recompensa = Number(pm.environment.get('hu07_mision_recompensa_1'));",
+                  "pm.test('La primera misión acredita su recompensa', () => {",
+                  "  pm.expect(String(json.id)).to.eql(String(pm.environment.get('hu07_asignacion_1_id')));",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu07_mision_id_1')));",
+                  "  pm.expect(json.semillasAcreditadas).to.eql(recompensa);",
+                  "  pm.expect(json.totalSemillas).to.eql(recompensa);",
+                  "  pm.expect(json.acreditada).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_1_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_1_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reacreditar Misión 1 - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const json = pm.response.json();",
+                  "pm.test('Mensaje impide acreditar dos veces', () => {",
+                  "  pm.expect(json.message).to.eql('La misión ya fue acreditada');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_1_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_1_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validar Persistencia de Primera Acreditación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const nino = json.find(item => String(item.id) === String(pm.environment.get('hu07_nino_id')));",
+                  "const esperado = Number(pm.environment.get('hu07_mision_recompensa_1'));",
+                  "pm.test('La primera recompensa persiste sin duplicarse', () => {",
+                  "  pm.expect(nino).to.exist;",
+                  "  pm.expect(nino.totalSemillas).to.eql(esperado);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos/tutor/{{tutor_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos",
+                "tutor",
+                "{{tutor_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar Misión 2 para Acreditar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('La misión queda COMPLETADA y lista para acreditar', () => {",
+                  "  pm.expect(String(json.id)).to.eql(String(pm.environment.get('hu07_asignacion_2_id')));",
+                  "  pm.expect(json.semillasRecompensa).to.eql(Number(pm.environment.get('hu07_mision_recompensa_2')));",
+                  "  pm.expect(json.estado).to.eql('COMPLETADA');",
+                  "  pm.expect(json.fechaCompletado).to.not.eql(null);",
+                  "  pm.expect(json.evidencia).to.eql(null);",
+                  "  pm.expect(json.acreditada).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_2_id}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_2_id}}",
+                "confirmar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Acreditar Misión 2 - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const recompensa1 = Number(pm.environment.get('hu07_mision_recompensa_1'));",
+                  "const recompensa2 = Number(pm.environment.get('hu07_mision_recompensa_2'));",
+                  "const esperado = recompensa1 + recompensa2;",
+                  "pm.test('La segunda misión acumula ambas recompensas', () => {",
+                  "  pm.expect(String(json.id)).to.eql(String(pm.environment.get('hu07_asignacion_2_id')));",
+                  "  pm.expect(String(json.ninoId)).to.eql(String(pm.environment.get('hu07_nino_id')));",
+                  "  pm.expect(String(json.misionId)).to.eql(String(pm.environment.get('hu07_mision_id_2')));",
+                  "  pm.expect(json.semillasAcreditadas).to.eql(recompensa2);",
+                  "  pm.expect(json.totalSemillas).to.eql(esperado);",
+                  "  pm.expect(json.acreditada).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/misiones-ninos/{{hu07_asignacion_2_id}}/acreditar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "misiones-ninos",
+                "{{hu07_asignacion_2_id}}",
+                "acreditar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validar Total Final de Semillas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const nino = json.find(item => String(item.id) === String(pm.environment.get('hu07_nino_id')));",
+                  "const esperado = Number(pm.environment.get('hu07_mision_recompensa_1')) + Number(pm.environment.get('hu07_mision_recompensa_2'));",
+                  "pm.test('El total acumulado persiste en el niño', () => {",
+                  "  pm.expect(nino).to.exist;",
+                  "  pm.expect(nino.totalSemillas).to.eql(esperado);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ninos/tutor/{{tutor_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ninos",
+                "tutor",
+                "{{tutor_id}}"
               ]
             }
           },

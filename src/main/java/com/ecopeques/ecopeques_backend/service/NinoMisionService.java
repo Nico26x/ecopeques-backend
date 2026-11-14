@@ -2,10 +2,12 @@ package com.ecopeques.ecopeques_backend.service;
 
 import com.ecopeques.ecopeques_backend.dto.AsignarMisionRequest;
 import com.ecopeques.ecopeques_backend.dto.ConfirmarMisionRequest;
+import com.ecopeques.ecopeques_backend.dto.MisionAcreditadaResponse;
 import com.ecopeques.ecopeques_backend.dto.MisionAsignadaResponse;
 import com.ecopeques.ecopeques_backend.exception.EvidenciaInvalidaException;
 import com.ecopeques.ecopeques_backend.exception.LimiteMisionesAlcanzadoException;
 import com.ecopeques.ecopeques_backend.exception.MisionNoConfirmableException;
+import com.ecopeques.ecopeques_backend.exception.MisionNoAcreditableException;
 import com.ecopeques.ecopeques_backend.exception.MisionNotFoundException;
 import com.ecopeques.ecopeques_backend.exception.MisionYaAsignadaException;
 import com.ecopeques.ecopeques_backend.exception.NinoMisionNotFoundException;
@@ -112,6 +114,44 @@ public class NinoMisionService {
         asignacion.setAcreditada(false);
 
         return toResponse(ninoMisionRepository.save(asignacion));
+    }
+
+    @Transactional
+    public MisionAcreditadaResponse acreditarMision(Long id, String emailTutorAutenticado) {
+        Usuario tutor = buscarTutorPorEmail(emailTutorAutenticado);
+        NinoMision asignacion = ninoMisionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NinoMisionNotFoundException("La asignación de misión no existe"));
+
+        if (!asignacion.getNino().getTutor().getId().equals(tutor.getId())) {
+            throw new AccessDeniedException("No tienes permiso para acreditar esta misión");
+        }
+
+        if (asignacion.getEstado() != EstadoMisionAsignada.COMPLETADA) {
+            throw new MisionNoAcreditableException("La misión debe estar completada antes de acreditarla");
+        }
+
+        if (Boolean.TRUE.equals(asignacion.getAcreditada())) {
+            throw new MisionNoAcreditableException("La misión ya fue acreditada");
+        }
+
+        Nino nino = ninoRepository.findByIdForUpdate(asignacion.getNino().getId())
+                .orElseThrow(() -> new NinoNotFoundException("Niño no encontrado"));
+        int semillasAcreditadas = asignacion.getMision().getSemillasRecompensa();
+
+        nino.setTotalSemillas(nino.getTotalSemillas() + semillasAcreditadas);
+        asignacion.setAcreditada(true);
+
+        ninoRepository.save(nino);
+        ninoMisionRepository.save(asignacion);
+
+        return new MisionAcreditadaResponse(
+                asignacion.getId(),
+                nino.getId(),
+                asignacion.getMision().getId(),
+                semillasAcreditadas,
+                nino.getTotalSemillas(),
+                asignacion.getAcreditada()
+        );
     }
 
     @Transactional(readOnly = true)

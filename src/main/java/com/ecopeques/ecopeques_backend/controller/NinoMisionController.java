@@ -2,6 +2,7 @@ package com.ecopeques.ecopeques_backend.controller;
 
 import com.ecopeques.ecopeques_backend.dto.AsignarMisionRequest;
 import com.ecopeques.ecopeques_backend.dto.ConfirmarMisionRequest;
+import com.ecopeques.ecopeques_backend.dto.MisionAcreditadaResponse;
 import com.ecopeques.ecopeques_backend.dto.MisionAsignadaResponse;
 import com.ecopeques.ecopeques_backend.service.NinoMisionService;
 import jakarta.validation.Valid;
@@ -42,6 +43,14 @@ public class NinoMisionController {
             Authentication authentication
     ) {
         return ResponseEntity.ok(ninoMisionService.confirmarMision(id, request, authentication.getName()));
+    }
+
+    @PutMapping("/misiones-ninos/{id}/acreditar")
+    public ResponseEntity<MisionAcreditadaResponse> acreditarMision(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(ninoMisionService.acreditarMision(id, authentication.getName()));
     }
 
     @GetMapping("/misiones-ninos/tutor/pendientes")
